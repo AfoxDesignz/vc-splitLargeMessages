@@ -20,10 +20,12 @@ import { DraftType, UserStore } from "@webpack/common";
 const cl = classNameFactory("vc-splitLargeMessages-");
 
 const settings = definePluginSettings({
-    delayMs: {
-        type: OptionType.NUMBER,
-        description: "Delay before prefilling the next chunk (ms)",
-        default: 1000
+    delay: {
+        type: OptionType.SLIDER,
+        description: "Delay before prefilling the next chunk (seconds)",
+        markers: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5],
+        default: 1,
+        stickToMarkers: true
     },
     byNewlines: {
         type: OptionType.BOOLEAN,
@@ -74,7 +76,7 @@ function queueNextChunk(channelId: string) {
     if (!chunks.length) pendingChunks.delete(channelId);
     if (!nextChunk) return;
 
-    const delayMs = Math.max(0, settings.store.delayMs ?? 0);
+    const delayMs = Math.max(0, (settings.store.delay ?? 1) * 1000);
     currentTimeout = setTimeout(() => {
         currentTimeout = null;
         DraftManager?.clearDraft?.(channelId, DraftType.ChannelMessage);
@@ -167,6 +169,7 @@ export default definePlugin({
     }
 });
 
+// Text splitting and codeblock repair logic based on an implementation by https://github.com/mwittrien
 function splitMessageSafe(text: string, limit: number): string[] {
     if (text.length <= limit) return [text];
 
