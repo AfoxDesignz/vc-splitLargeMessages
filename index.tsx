@@ -1,18 +1,23 @@
 /*
  * Vencord, a Discord client mod
- * Copyright (c) 2026 Luca Beyer
+ * Copyright (c) 2026 Vendicated and contributors
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 import "./style.css";
 
 import { MessageObject } from "@api/MessageEvents";
+import { isPluginEnabled } from "@api/PluginManager";
 import { definePluginSettings } from "@api/Settings";
 import ErrorBoundary from "@components/ErrorBoundary";
+import { classNameFactory } from "@utils/css";
 import { insertTextIntoChatInputBox } from "@utils/discord";
+import { classes, Devs } from "@utils/index";
 import definePlugin, { OptionType } from "@utils/types";
 import { findByPropsLazy } from "@webpack";
 import { DraftType, UserStore } from "@webpack/common";
+
+const cl = classNameFactory("vc-splitLargeMessages-");
 
 const settings = definePluginSettings({
     delayMs: {
@@ -46,6 +51,7 @@ const DraftManager = findByPropsLazy("clearDraft", "saveDraft") as {
 };
 
 const pendingChunks = new Map<string, string[]>();
+let currentTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function getActiveLimit() {
     const user = UserStore.getCurrentUser();
@@ -69,7 +75,8 @@ function queueNextChunk(channelId: string) {
     if (!nextChunk) return;
 
     const delayMs = Math.max(0, settings.store.delayMs ?? 0);
-    setTimeout(() => {
+    currentTimeout = setTimeout(() => {
+        currentTimeout = null;
         DraftManager?.clearDraft?.(channelId, DraftType.ChannelMessage);
         insertTextIntoChatInputBox(nextChunk);
     }, delayMs);
@@ -77,9 +84,9 @@ function queueNextChunk(channelId: string) {
 
 export default definePlugin({
     name: "SplitLargeMessages",
-    description: "Splits long messages and automatically places the next part into your chat box so you can send it safely.",
+    description: "Splits long messages that exceed the character limit and automatically queues the next part in your chat box after sending.",
     tags: ["Chat", "Utility"],
-    authors: [{ name: "luca.beyer", id: 405090676771127317n }],
+    authors: [Devs.lucabeyer],
     settings,
 
     patches: [
@@ -103,6 +110,13 @@ export default definePlugin({
                 match: /(?<=textValue:(\i),editorHeight:\i,channelId:\i\.id\}\)),/,
                 replace: ",$self.renderSplitCounter({text:$1}),"
             }
+        },
+        {
+            find: "upsellLongMessages?.iconOnly",
+            replacement: {
+                match: /if\(!\((\i&&\i>=0\|\|!\i\|\|\i&&!\i)\)\)return null;/,
+                replace: "return null;"
+            }
         }
     ],
 
@@ -110,19 +124,25 @@ export default definePlugin({
         const limit = getSplitLimit();
         if (!text.length || text.length <= limit) return null;
 
-        const count = splitMessageSafe(text, limit).filter(Boolean).length;
+        const count = splitMessageSafe(text, limit).filter(c => c.length > 0).length;
         if (count <= 1) return null;
 
+        const isCharCounterActive = isPluginEnabled("CharacterCounter");
+
         return (
-            <div className="vc-splitLargeMessages-counter">
+            <div className={classes(cl("counter"), isCharCounterActive && cl("shifted"))}>
                 <span>{count}</span>
-                <span> Messages</span>
+                <span> messages</span>
             </div>
         );
     }, { noop: true }),
 
     stop() {
         pendingChunks.clear();
+        if (currentTimeout) {
+            clearTimeout(currentTimeout);
+            currentTimeout = null;
+        }
     },
 
     onBeforeMessageSend(channelId: string, message: MessageObject) {
@@ -135,7 +155,7 @@ export default definePlugin({
 
         if (content.length <= limit) return;
 
-        const messageChunks = splitMessageSafe(content, limit).filter(Boolean);
+        const messageChunks = splitMessageSafe(content, limit).filter(c => c.length > 0);
         if (!messageChunks.length) return;
 
         message.content = messageChunks.shift()!;
@@ -166,12 +186,12 @@ function splitBySeparator(text: string, limit: number, separator: string, leaveG
             let count = 0;
             const shortWords: string[] = [];
 
-            longWord.split("").forEach(c => {
+            for (const c of longWord) {
                 if (shortWords[count] && (shortWords[count].length >= longWordSize || (c === "\n" && shortWords[count].length >= longWordSize - 100))) {
                     count++;
                 }
                 shortWords[count] = shortWords[count] ? shortWords[count] + c : c;
-            });
+            }
 
             text = text.replace(longWord, shortWords.join(separator));
         }
@@ -181,10 +201,10 @@ function splitBySeparator(text: string, limit: number, separator: string, leaveG
     let idx = 0;
     const splitLimit = Math.floor(limit * (39 / 40));
 
-    text.split(separator).forEach(word => {
+    for (const word of text.split(separator)) {
         if (chunks[idx] && (chunks[idx] + "" + word).length > splitLimit) idx++;
         chunks[idx] = chunks[idx] ? chunks[idx] + separator + word : word;
-    });
+    }
 
     let insertCodeBlock: string | null = null;
     let insertCodeLine: string | null = null;
@@ -214,5 +234,5 @@ function splitBySeparator(text: string, limit: number, separator: string, leaveG
         }
     }
 
-    return chunks.filter(Boolean);
+    return chunks.filter(c => c.length > 0);
 }
