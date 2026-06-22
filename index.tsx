@@ -88,7 +88,7 @@ export default definePlugin({
     name: "SplitLargeMessages",
     description: "Splits long messages that exceed the character limit and automatically queues the next part in your chat box after sending.",
     tags: ["Chat", "Utility"],
-    authors: [Devs.lucabeyer],
+    authors: [{ name: "luca.beyer", id: 405090676771127317n }],
     settings,
 
     patches: [
