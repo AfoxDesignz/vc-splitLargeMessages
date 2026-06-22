@@ -1,13 +1,24 @@
-# Split Large Messages
+# Split Large Messages for Vencord
 
-Split large messages that are longer than the discord character limit into multiple, but without encouraging spamming or abusing the discord API, by requiring user interaction for every message sent.
-<img width="197" height="55" alt="image" src="https://github.com/user-attachments/assets/0aa45398-e323-49e0-89e6-640f0cbd73bf" />
+> [!TIP]
+> Get rid of discord's character limits, but in a ToS friendly way!
+
+When you try to send a message that exceeds discord's limits, this plugin will split it up into multiple messages.
+
+### How it works
+The plugin intercepts the message, splits it into chunks, and allows the first chunk to be sent through the users initial action. It then waits for a configurable delay before automatically prefilling the chat input box with the next chunk. The user then has to manually hit `Enter` to send each subsequent chunk. Also works with codeblocks.
+
+![](https://github.com/user-attachments/assets/80435572-302c-4780-ab81-16df3e449f97)
+_Counter to indicate the split count._
+
+> [!WARNING]  
+> Completely disables discord's `convert to txt-file` feature (which isn't useful anyway).
 
 ### Installation:
 Follow [this guide](https://discord.com/channels/1015060230222131221/1257038407503446176) on the official [vencord discord server](https://discord.gg/vencord).
 
 ### Settings:
-<img width="596" height="505" alt="image" src="https://github.com/user-attachments/assets/a6b03b2f-0d74-46b3-abe8-e9df5f18d7d0" />
+![](https://github.com/user-attachments/assets/44d25510-ea36-4a3f-9043-68c930382e02)
 
 ### Credits:
-Some parts of this plugin's logic are inspired by https://github.com/Vendicated/Vencord/pull/3563 and https://github.com/mwittrien/BetterDiscordAddons/blob/c561c50fadf8ce7e7862e6a090e48196f6069b9b/Plugins/SplitLargeMessages/SplitLargeMessages.plugin.js
+Text splitting and codeblock repair logic are based on a js implementation by [Mirco  Wittrien](https://github.com/mwittrien).
