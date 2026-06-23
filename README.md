@@ -23,6 +23,3 @@ Follow [this guide](https://discord.com/channels/1015060230222131221/12570384075
 ### Compatibility
 Fully compatible with all tested official plugins, explicitly with [CharacterCounter](https://vencord.dev/plugins/CharacterCounter):
 ![](https://github.com/user-attachments/assets/a9e8f175-64a1-48bc-87d5-efdbac6da1dd)
-
-### Credits:
-Text splitting and codeblock repair logic are based on a js implementation by [Mirco  Wittrien](https://github.com/mwittrien).
